@@ -14,7 +14,7 @@ setup: build
 
 install: setup
 	npm run deploy
-	rm -rf package.zip
+	del -rf package.zip
 
 teardown:
 	npm run teardown
