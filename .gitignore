@@ -1,4 +1,5 @@
 *.iml
+*.orig
 .idea/**/*
 coverage/**/*
 node_modules/**/*
