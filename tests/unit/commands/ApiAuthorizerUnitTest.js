@@ -7,10 +7,10 @@ var sinon = require('sinon');
 
 var testSubject;
 
-describe('ApiModelCommand', function () {
-    var createModelStub;
-    var deleteModelStub;
-    var patchModelStub;
+describe('ApiAuthorizerCommand', function () {
+    var createAuthorizerStub;
+    var deleteAuthorizerStub;
+    var patchAuthorizerStub;
     var getForResponseStub;
     var getParametersStub;
 
@@ -24,34 +24,34 @@ describe('ApiModelCommand', function () {
             warnOnUnregistered: false
         });
 
-        createModelStub = sinon.stub();
-        deleteModelStub = sinon.stub();
-        patchModelStub = sinon.stub();
+        createAuthorizerStub = sinon.stub();
+        deleteAuthorizerStub = sinon.stub();
+        patchAuthorizerStub = sinon.stub();
         getForResponseStub = sinon.stub();
         getParametersStub = sinon.stub();
 
-        var apiModelServiceStub = {
-            createModel: createModelStub,
-            deleteModel: deleteModelStub,
-            patchModel: patchModelStub,
+        var apiAuthorizerServiceStub = {
+            createAuthorizer: createAuthorizerStub,
+            deleteAuthorizer: deleteAuthorizerStub,
+            patchAuthorizer: patchAuthorizerStub,
             getForResponse: getForResponseStub
         };
-        var apiModelEventStub = {
+        var apiAuthorizerEventStub = {
             getParameters: getParametersStub
         };
 
-        mockery.registerMock('../service/ApiModel/ApiModelService', apiModelServiceStub);
-        mockery.registerMock('../service/ApiModel/ApiModelEvent', apiModelEventStub);
+        mockery.registerMock('../service/ApiAuthorizer/ApiAuthorizerService', apiAuthorizerServiceStub);
+        mockery.registerMock('../service/ApiAuthorizer/ApiAuthorizerEvent', apiAuthorizerEventStub);
 
-        testSubject = require('../../../lib/commands/ApiModel');
+        testSubject = require('../../../lib/commands/ApiAuthorizer');
     });
     beforeEach(function () {
-        createModelStub.reset().resetBehavior();
-        createModelStub.yields(undefined);
-        deleteModelStub.reset().resetBehavior();
-        deleteModelStub.yields(undefined);
-        patchModelStub.reset().resetBehavior();
-        patchModelStub.yields(undefined);
+        createAuthorizerStub.reset().resetBehavior();
+        createAuthorizerStub.yields(undefined, {});
+        deleteAuthorizerStub.reset().resetBehavior();
+        deleteAuthorizerStub.yields(undefined);
+        patchAuthorizerStub.reset().resetBehavior();
+        patchAuthorizerStub.yields(undefined);
         getForResponseStub.reset().resetBehavior();
         getForResponseStub.yields(undefined, {});
         getParametersStub.reset().resetBehavior();
@@ -72,20 +72,20 @@ describe('ApiModelCommand', function () {
         });
     });
 
-    describe('createResource', function () {
-        it('should create resource', function (done) {
+    describe('create authorizer', function () {
+        it('should create api authorizer', function (done) {
             testSubject.createResource({}, {}, { params: {} }, function (error) {
                 expect(error).to.be.null;
-                expect(createModelStub.called).to.be.true;
+                expect(createAuthorizerStub.called).to.be.true;
                 expect(getForResponseStub.called).to.be.true;
                 done();
             });
         });
-        it('should fail create resource', function (done) {
-            createModelStub.yields('createError');
+        it('should fail create authorizer', function (done) {
+            createAuthorizerStub.yields('createError');
             testSubject.createResource({}, {}, { params: {} }, function (error) {
                 expect(error).to.equal('createError');
-                expect(createModelStub.called).to.be.true;
+                expect(createAuthorizerStub.called).to.be.true;
                 expect(getForResponseStub.called).to.be.false;
                 done();
             });
@@ -94,7 +94,7 @@ describe('ApiModelCommand', function () {
             getForResponseStub.yields('getForResponseError');
             testSubject.createResource({}, {}, { params: {} }, function (error) {
                 expect(error).to.equal('getForResponseError');
-                expect(createModelStub.called).to.be.true;
+                expect(createAuthorizerStub.called).to.be.true;
                 expect(getForResponseStub.called).to.be.true;
                 done();
             });
@@ -103,17 +103,25 @@ describe('ApiModelCommand', function () {
 
     describe('deleteResource', function () {
         it('should delete resource', function (done) {
-            testSubject.deleteResource({}, {}, { params: {} }, function (error) {
+            testSubject.deleteResource({ PhysicalResourceId: 'valid' }, {}, { params: {} }, function (error) {
                 expect(error).to.be.undefined;
-                expect(deleteModelStub.called).to.be.true;
+                expect(deleteAuthorizerStub.called).to.be.true;
                 done();
             });
         });
         it('should fail delete resource', function (done) {
-            deleteModelStub.yields('deleteError');
-            testSubject.deleteResource({}, {}, { params: {} }, function (error) {
+            deleteAuthorizerStub.yields('deleteError');
+            testSubject.deleteResource({ PhysicalResourceId: 'valid' }, {}, { params: {} }, function (error) {
                 expect(error).to.equal('deleteError');
-                expect(deleteModelStub.called).to.be.true;
+                expect(deleteAuthorizerStub.called).to.be.true;
+                done();
+            });
+        });
+        it('should fail delete resource with invalid physicalResourceId', function (done) {
+
+            testSubject.deleteResource({ PhysicalResourceId: 'invalid/withslash' }, {}, { params: {} }, function (error) {
+                expect(error).to.be.undefined;
+                expect(deleteAuthorizerStub.called).to.be.false;
                 done();
             });
         });
@@ -124,17 +132,17 @@ describe('ApiModelCommand', function () {
             testSubject.updateResource({}, {}, { params: {}}, function (error, resource) {
                 expect(error).to.be.null;
                 expect(resource).to.be.an('object');
-                expect(patchModelStub.called).to.be.true;
+                expect(patchAuthorizerStub.called).to.be.true;
                 expect(getForResponseStub.called).to.be.true;
                 done();
             });
         });
         it('should fail update resource if update fails', function (done) {
-            patchModelStub.yields('updateError');
+            patchAuthorizerStub.yields('updateError');
             testSubject.updateResource({}, {}, { params: {} }, function (error, resource) {
                 expect(error).to.equal('updateError');
                 expect(resource).to.be.undefined;
-                expect(patchModelStub.called).to.be.true;
+                expect(patchAuthorizerStub.called).to.be.true;
                 expect(getForResponseStub.called).to.be.false;
                 done();
             });
@@ -144,17 +152,17 @@ describe('ApiModelCommand', function () {
             testSubject.updateResource({}, {}, { params: {} }, function (error, resource) {
                 expect(error).to.equal('getForResponseError');
                 expect(resource).to.be.undefined;
-                expect(patchModelStub.called).to.be.true;
+                expect(patchAuthorizerStub.called).to.be.true;
                 expect(getForResponseStub.called).to.be.true;
                 done();
             });
         });
         it('should fail if get for response doesnt find the resource', function (done) {
-            patchModelStub.yields('API Model not found');
+            patchAuthorizerStub.yields('API authorizer not found');
             testSubject.updateResource({}, {}, { params: {} }, function (error, resource) {
-                expect(error).to.equal('API Model not found');
+                expect(error).to.equal('API authorizer not found');
                 expect(resource).to.be.undefined;
-                expect(patchModelStub.called).to.be.true;
+                expect(patchAuthorizerStub.called).to.be.true;
                 expect(getForResponseStub.called).to.be.false;
                 done();
             });

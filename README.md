@@ -1,15 +1,18 @@
+**Important Notice!**
+If you installed this prior to February 17 2016 you have to uninstall everything, including any APIs created using 
+these resources, before you upgrade. There has been a lot of changes made and they are not backward compatible!
+
 #API Gateway for CloudFormation
 API Gateway for CloudFormation is a set of Custom Resources that allows you to manage your API Gateway setup
-with CloudFormation. It is deployed with CloudFormation and run on AWS Lambda.
+with CloudFormation. It is deployed with CloudFormation and runs on AWS Lambda.
 
 The project is inspired by [AWS Labs API Gateway Swagger Importer](https://github.com/awslabs/aws-apigateway-importer) so you will see a lot of familiar syntax in the setup.
 
-![Build status](https://travis-ci.org/carlnordenfelt/aws-api-gateway-for-cloudformation.svg?branch=master)
+[![Build Status](https://travis-ci.org/carlnordenfelt/aws-api-gateway-for-cloudformation.svg?branch=master)](https://travis-ci.org/carlnordenfelt/aws-api-gateway-for-cloudformation)
 
 ##Contents
 1. <a href="#a-note-on-terminology-before-we-begin">A note on terminology before we begin</a>
 1. <a href="#installation">Installation</a>
-    1. <a href="#uninstallation">Uninstallation</a>
 1. <a href="#usage">Usage</a>
     1. <a href="#overview">Overview</a>
     1. <a href="#create-an-api">Create an API</a>
@@ -18,7 +21,10 @@ The project is inspired by [AWS Labs API Gateway Swagger Importer](https://githu
     1. <a href="#create-a-model">Create a Model</a>
     1. <a href="#create-a-domain-name">Create a Domain Name</a>
     1. <a href="#create-a-base-path-mapping">Create a Base Path Mapping</a>
+    1. <a href="#create-an-authorizer">Create an Authorizer</a>
+1. <a href="#change-log">Change log</a>
 1. <a href="#todo">TODO</a>
+1. <a href="#contribute">Contribute</a>
 
 ##A note on terminology before we begin
 Throughout this document there are references to *resources* and *API Resources*.
@@ -27,17 +33,17 @@ It is very important to distinguish between the two:
 * A *resource* is a CloudFormation term and can refer to any AWS resource.
 * An *API Resource* is a specific type of AWS resource (Custom::ApiResource) which is called "Resource" in API Gateway.
 
-Confusing, I know...
-
 ##Installation
-##Prerequisites
-* You'll need an [Amazon AWS Account](http://aws.amazon.com).
+###Prerequisites
+* You need an [Amazon AWS Account](http://aws.amazon.com).
 * You need an IAM user with access/secret key, see required permissions below.
 * You have to install & configure the [AWS-CLI](http://docs.aws.amazon.com/cli/latest/userguide)
 
 ###Setup IAM permissions
 To be able to install the Custom Resource library you require a set of permissions.
-Configure your IAM user with the following policy and make sure that you have configured your aws-cli with access and secret key.
+Configure your IAM user with the following policy and make sure that you have configured your aws-cli with access and secret key. 
+
+**Note:** This Role contains delete permissions. If you do not want to give these permissions you can omit the last 6 permissions in the policy. If you do so, uninstallation cannot be done via the provided scripts.
 
     {
         "Version": "2012-10-17",
@@ -47,8 +53,6 @@ Configure your IAM user with the following policy and make sure that you have co
                 "Action": [
                     "cloudformation:CreateStack",
                     "cloudformation:DescribeStacks",
-                    "dynamodb:CreateTable",
-                    "dynamodb:DescribeTable",
                     "iam:CreateRole",
                     "iam:CreatePolicy",
                     "iam:AttachRolePolicy",
@@ -56,7 +60,14 @@ Configure your IAM user with the following policy and make sure that you have co
                     "iam:PassRole",
                     "lambda:CreateFunction",
                     "lambda:UpdateFunctionCode",
-                    "lambda:GetFunctionConfiguration"
+                    "lambda:GetFunctionConfiguration",
+                    
+                    "cloudformation:DeleteStack",
+                    "lambda:DeleteFunction",
+                    "iam:ListPolicyVersions",
+                    "iam:DetachRolePolicy",
+                    "iam:DeletePolicy",
+                    "iam:DeleteRole"
                 ],
                 "Resource": [
                     "*"
@@ -65,29 +76,88 @@ Configure your IAM user with the following policy and make sure that you have co
         ]
     }
 
-###Run the installation script
-Run the following command from you shell:
+###Download the installation package
 
-    make install
+<a href="http://apigatewaycloudformation.s3-website-eu-west-1.amazonaws.com/install/latest">Download the installation package</a>, unzip it and follow the OS specific instructions below.
 
-The installation takes a couple of minutes after which you are ready to start using the new CloudFormation resources.
-The script will output the Custom Resource Lambda function ARN.
+####Unix
+Install the infrastructure:
+
+    unix/install.sh
+
+Installation takes a couple of minutes and when it completes it will output the Custom Resource Lambda function ARN.
 Save this value, it is the value of the ServiceToken parameter that each Custom Resource requires in your CloudFormation templates. 
 
-####Uninstallation
-If you want to uninstall the setup you simply run make teardown.
-After you've run this command you can run make install again to get a new environment.
+Once installation is done, run the following command to deploy the code:
 
-**Note:** if you reinstall the setup you have to update the ServiceToken in your CloudFormation templates. 
+    unix/deploy.sh
+
+#####Options
+
+**-n NAME**<br/>
+Sets a custom name for your installation (the default is ApiGatewayCloudFormation). 
+Note that the custom name has to be provided to all scripts.
+
+**-v VERSION**<br/>
+If you don't want to deploy the latest version you can supply another version name by passing it as an argument with -v.
+Available versions follow this naming convention: v{versionNumber}.zip
+-v is only supported by the deploy script.
+
+For a list of available versions, please see the <a href="#change-log">Change Log</a>.
+
+#####Uninstall
+If you want to uninstall the setup you simply run:
+
+    unix/uninstall.sh
+
+If you provided a custom name during installation you have to provide the same name during un-installation with the -n argument
+
+**Note:** If you reinstall the setup you have to update the ServiceToken in your CloudFormation templates. 
+
+####Windows
+
+Install the infrastructure:
+
+    windows\install.ps1
+
+Installation takes a couple of minutes and when it completes it will output the Custom Resource Lambda function ARN.
+Save this value, it is the value of the ServiceToken parameter that each Custom Resource requires in your CloudFormation templates. 
+
+Once installation is done, run the following command to deploy the code:
+
+    windows\deploy.ps1
+
+#####Options
+
+**-name NAME**<br/>
+Sets a custom name for your installation (the default is ApiGatewayCloudFormation). 
+Note that the custom name has to be provided to all scripts.
+
+**-version VERSION**<br/>
+If you don't want to deploy the latest version you can supply another version name by passing it as an argument with -version.
+Available versions follow this naming convention: v{versionNumber}.zip
+-version is only supported by the deploy script.
+
+For a list of available versions, please see the <a href="#change-log">Change Log</a>.
+
+#####Uninstall
+If you want to uninstall the setup you simply run:
+
+    windows\uninstall.ps1
+
+If you provided a custom name during installation you have to provide the same name during un-installation with the -name argument
+
+**Note:** If you reinstall the setup you have to update the ServiceToken in your CloudFormation templates. 
+
 
 #Usage   
 
 ##Overview
-This setup allows you to manage the majority of the API Gateway releated resource. Below you'll find (hopefully) exhaistive documentation on how to use each resource type.
+This setup allows you to manage the majority of the API Gateway related resources. Below you'll find (hopefully) exhaustive documentation on how to use each resource type.
 
-One thing that is not currently supported are API deployments. There is a bit of a catch-22 thing happening with the SDK and deployments where I can't create a stage without a deployment and I can create a deployment without a stage. I have this on the TODO list but for now you'll have to mange API deployment outside of this project.
+One thing that is not currently supported are API deployments. There is a bit of a catch-22 thing happening with the SDK and deployments where I can't create a stage without a deployment and I can't create a deployment without a stage. I have this on the TODO list but for now you'll have to manage API deployment outside of this project.
 
-Also note that some resources may be flagged as experimental which means that they haven't been tested thouroghly.
+Also note that some resources may be flagged as experimental which means that they haven't been tested thoroughly.
 
 That said, on to what you can do.
 
@@ -114,21 +184,20 @@ An optional description of your REST API.
 * Type: String
 * Update: No interruption, partial. You may add/change this property but not remove it. 
 
-###Outputs
-http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createRestApi-property
-In addition the parent resource id is also returned in the response:
-
-    Fn::GetAtt: ["MyRestApi", "parentResourceId"]
-
 ###CloudFormation example
-    "MyRestApi" : {
+    "TestRestApi" : {
         "Type" : "Custom::RestApi",
         "Properties" : {
             "ServiceToken": "{Lambda_Function_ARN}",
-            "name": "My API",
-            "description": "This is my API"
+            "name": "Test API",
+            "description": "This is a test API"
         }
     }
+
+Outputs: http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createRestApi-property
+In addition the parent resource id is also returned in the response:
+
+    Fn::GetAtt: ["TestRestApi", "parentResourceId"]
 
 ##Create an API Resource
 
@@ -137,7 +206,7 @@ http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createRes
 
 **Note:** If you delete an API Resource from your CloudFormation template, all child resources are deleted by API Gateway.
 This may create certain data inconsistencies between the actual API and what is believed to be setup from the Custom Resource perspective.
-I therefor recommend that if you remove an API Resource from a tempalte, remove all child resources at the same time to ensure a consistent data model.
+I therefore recommend that if you remove an API Resource from a template, remove all child resources at the same time to ensure a consistent data model.
 
 ###Parameters
 **restApiId:**
@@ -178,8 +247,8 @@ A list of HTTP methods that allow CORS requests under this API Resource.
 
 **corsConfiguration.allowHeaders**
 List of headers that the server allows the user-agent to send in requests.
-If this property is not set it is defaulted to the headers that Amazon recommends: Content-Type,X-Amz-Date,Authorization,X-Api-Key
-If it is set it will override the default headers and not include them. See *corsConfiguration.allowDefaultHeaders* for further details.
+If this property is not set it will default to the headers that Amazon recommends: Content-Type,X-Amz-Date,Authorization,X-Api-Key.
+If it is set it will override the default headers and exclude them. See *corsConfiguration.allowDefaultHeaders* for further details.
  
 * Required: no
 * Type: String array
@@ -222,28 +291,27 @@ Sets the Access-Control-Allow-Credentials header to true if this configuration i
 * Type: Boolean
 * Update: No interruption
 
-###Outputs
-See http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createResource-property
-
 ###CloudFormation example
-    "MyApiResource" : {
+    "TestApiResource" : {
         "Type" : "Custom::ApiResource",
         "Properties" : {
             "ServiceToken": "{Lambda_Function_ARN}",
             "restApiId": "xyz123",
             "parentId": "abc456",
             "pathPart": "test",
-            "corsConfiguration":
-                "allowMethods" ["GET", "POST"],
+            "corsConfiguration": {
+                "allowMethods": ["GET", "POST"],
                 "allowHeaders": ["x-my-header", "some-other-header"],
                 "allowDefaultHeaders": true,
-                "allowOrigin": "http://example.com"
+                "allowOrigin": "http://example.com",
                 "exposeHeaders": ["some-header", "x-another-header"],
                 "maxAge": 1800,
                 "allowCredentials": true
              }
         }
     }
+
+Outputs: http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createResource-property
 
 ##Create an API Method
 
@@ -280,9 +348,17 @@ The HTTP verb that this method adheres to.
 * Update: No interruption
 
 **method.authorizationType**
-API Method authorization type
+API Method authorization type.
+Set to CUSTOM if you want to use an Api Authorizer.
 
 * Required: no, default is NONE
+* Type: String
+* Update: No interruption
+
+**method.authorizerId**
+Authorizer Id if method.authorizationType is set to CUSTOM
+
+* Required: no
 * Type: String
 * Update: No interruption
 
@@ -302,7 +378,7 @@ Request models are represented as a key/value map, with a content type as the ke
 * Update: No interruption
 
 **method.parameters**
-Represents requests parameters that are sent with the backend request. 
+Represents request parameters that are sent with the backend request. 
 Request parameters are represented as a string array of parameter destinations. 
 The destination must match the pattern {location}.{name}, where location is either querystring, 
 path, or header. name must be a valid, unique parameter name.
@@ -378,7 +454,7 @@ path, or header. name must be a valid, unique parameter name.
 * Update: No interruption
 
 **integration.uri**
-URI if the backend service.
+URI to the backend service. Can be a url to another service, a Lambda ARN etc.
 
 * Required: conditional, must be set if *integration.type* is not set to MOCK.
 * Type: String
@@ -386,7 +462,7 @@ URI if the backend service.
 
 **responses** 
 Configurations for both the IntegrationResponses and the MethodResponses.
-The key is the selection pattern used to map the repsonse to a status code.
+The key is the selection pattern used to map the response to a status code.
 There should be one selection pattern with the value "default" which acts as the default response.
 The value is a response configuration object.
 
@@ -398,18 +474,20 @@ http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#putMethod
 * Update: Not available 
 
 **response.statusCode**
-The HTTP Status Code that this response configuration maps to
-Must be unique within the scope on each API Method definition.
+The HTTP Status Code that this response configuration maps to.
+Must be unique within the scope of each API Method definition.
 
 * Required: *yes*
 * Type: Integer
 * Update: No interruptions
 
 **response.headers** 
-Map of headers where the key is the destination header name and value is the source, or static value of the header.
+Map of headers where the key is the header name and value is the source, or static value of the header.
 Static values are specified using enclosing single quotes, and backend response headers can be read 
 using the pattern integration.response.header.{name}.
 CORS headers should not be specified as they are added automatically.
+
+Note that the key should only be the name of the header that will be exposed to the client.
 
 * Required: no,
 * Type Map{String,String}
@@ -436,8 +514,8 @@ Response models are represented as a key/value map, with a content type as the k
 * Update: No interruption
 
 ###CloudFormation example:
-    "MyApiMethod" : {
-        "Type" : "Custom::ApiGateway_ApiMethod",
+    "TestApiMethod" : {
+        "Type" : "Custom::ApiMethod",
         "Properties" : {
             "ServiceToken": "{Lambda_Function_ARN}",
             "restApiId": "q1w2e3r4t5y6",
@@ -447,45 +525,32 @@ Response models are represented as a key/value map, with a content type as the k
                 "httpMethod": "GET",
                 "apiKeyRequired": "true",
                 "requestModels": {
-                    "application/json": "MyModel",
+                    "application/json": { "Fn::GetAtt": ["TestModel", "name"] }
                 },
                 "parameters": [
                     "querystring.sortBy",
-                    "header.x-my-header",
+                    "header.x-test-header",
                     "path.entityType"
                 ]
             },
             "integration": {
-                "type": "AWS",
-                "credentials": "arn:aws:iam::0123456789:role/APIGateway_Invoke_Lambda_20150102",
-                "cacheKeyParameters": [
-                    "sortBy"
-                ],
-                "cacheNamespace": "MyCacheNamespaceKey",
-                "httpMethod": "POST",
+                "type": "MOCK",
                 "requestTemplates": {
-                    "application/json: ""
+                    "application/json": "{\"statusCode\": 200}"
                 },
                 "requestParameters": {
-                    "someKey: "STRING"
+                    "integration.request.querystring.sortBy": "'hardcodedValue'"
                 }
-                "uri": "arn:aws:apigateway:eu-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-1:0123456789:function:MyLambdaBackend-LambdaFunction-YZX123XYZ123/invocations"
             },
             "responses": {
                 "default": {
                     "statusCode": "200",
-                    "responseModels": {
-                        "application/json": "MyResponseModelName",
-                    },
                     "headers": {
-                        "X-Custom-Header": "x-my-header"
+                        "X-Custom-Header": "'hardcodedValue'"
                     }
                 },
                 ".*NotFound.*": {
-                    "statusCode": "404",
-                    "responseModels": {
-                        "application/json": "MyResponseModelName",
-                    }
+                    "statusCode": "404"
                 }
             }
         }
@@ -529,7 +594,7 @@ Description of the model.
 * Update: No interruption
 
 **schema:**
-The model schema. This can be represented either a JSON object or a valid JSON string. 
+The model schema. This can be represented by either a JSON object or a valid JSON string. 
 
 * Required: no, default is an empty object
 * Type: String or object
@@ -539,12 +604,12 @@ The model schema. This can be represented either a JSON object or a valid JSON s
 http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createModel-property
 
 ###CloudFormation example
-    "MyApiModel" : {
+    "TestApiModel" : {
         "Type" : "Custom::ApiModel",
         "Properties" : {
             "ServiceToken": "{Lambda_Function_ARN}",
             "restApiId": "xyz123",
-            "name": "myModel",
+            "name": "TestModelName",
             "contentType": "application/json",
             "description": "This is my model",
             "schema": "..."
@@ -601,7 +666,7 @@ Do not include any intermediaries that are not in the chain of trust path.
 http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createDomainName-property
 
 ###CloudFormation example
-    "MyApiDomainName" : {
+    "TestApiDomainName" : {
         "Type" : "Custom::ApiDomainName",
         "Properties" : {
             "ServiceToken": "{Lambda_Function_ARN}",
@@ -656,7 +721,7 @@ Exclude this if you do not want callers to explicitly specify the stage name aft
 http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createBasePathMapping-property
 
 ###CloudFormation example
-    "MyApiBasePathMapping" : {
+    "TestApiBasePathMapping" : {
         "Type" : "Custom::ApiBasePathMapping",
         "Properties" : {
             "ServiceToken": "{Lambda_Function_ARN}",
@@ -667,8 +732,129 @@ http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createBas
         }
     }
 
+##Create an Authorizer
+
+Creates a new Api Gateway Authorizer
+http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createAuthorizer-property
+
+###Parameters
+**authorizerUri:**
+Authorizer Api Gateway Lambda function invocation ARN.
+Example: arn:aws:apigateway:eu-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-1:1234:function:LambdaName/invocations
+
+* Required: *yes*
+* Type: String
+* Update: No interruption
+
+**identitySource:**
+Source header from where the token can be read.
+Must match the regexp 'method.request.header.[a-zA-Z0-9._-]+'
+
+* Required: *yes*
+* Type: String
+* Update: No interruption
+
+**name:**
+The base path name that callers of the API must provide as part of the URL after the domain name. 
+This value must be unique for all of the mappings across a single API. 
+Exclude this if you do not want callers to specify a base path name after the domain name.
+
+* Required: *yes*
+* Type: String
+* Update: No interruption
+
+**restApiId:**
+The domain name of the BasePathMapping resource to create.
+
+* Required: *yes*
+* Type: String
+* Update: Not supported
+
+**authorizerCredentials:**
+IAM role that API Gateway will use to invoke the Lambda function.
+
+* Required: *yes*
+* Type: String
+* Update: No interruption
+
+**authorizerResultTtlInSeconds:**
+The TTL of cached authorizer results.
+
+* Required: no, default is 300
+* Type: Integer
+* Update: No interruption
+
+**identityValidationExpression:**
+Optional RegEx statement for API Gateway to validate the input token before calling the custom authorizer Lambda function.
+This helps you avoid or reduce the chances of being charged for processing invalid tokens.
+
+* Required: no
+* Type: String
+* Update: No interruption
+
+###Outputs
+http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/APIGateway.html#createAuthorizer-property
+
+###CloudFormation example
+    "TestAuthorizer" : {
+        "Type" : "Custom::ApiAuthorizer",
+        "Properties" : {
+            "ServiceToken": "{Lambda_Function_ARN}",
+            "restApiId": "xyz123",
+            "authorizerUri": "{Authorizer_Lambda_ARN}",
+            "identitySource": "x-auth-header",
+            "name": "TestAuthorizer",
+            "authorizerCredentials": "beta",
+            "authorizerResultTtlInSeconds": 3600,
+            "identityValidationExpression": "$[a-z]*"
+        }
+    }
+
+#Change Log
+
+## <a href="https://s3-eu-west-1.amazonaws.com/apigatewaycloudformation/builds/v1.1.4.zip">1.1.6</a> (2016-02-26)
+* Added error logging to deploy script.
+
+## <a href="https://s3-eu-west-1.amazonaws.com/apigatewaycloudformation/builds/v1.1.4.zip">1.1.4</a> (2016-02-21)
+* Added installation scripts for windows (powershell).
+
+## <a href="https://s3-eu-west-1.amazonaws.com/apigatewaycloudformation/builds/v1.1.3.zip">1.1.3</a> (2016-02-21)
+* Added installation scripts for unix that do not require npm or node to be installed.
+
+## <a href="https://s3-eu-west-1.amazonaws.com/apigatewaycloudformation/builds/v1.1.0.zip">1.1.0</a> (2016-02-19)
+* Introduced installation package so that you no longer have to clone the repo to install and deploy.
+
+## <a href="https://s3-eu-west-1.amazonaws.com/apigatewaycloudformation/builds/v1.0.4.zip">1.0.4</a>  (2016-02-18)
+* Introducing API Authorizers (http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html)
+
+## <a href="https://s3-eu-west-1.amazonaws.com/apigatewaycloudformation/builds/v1.0.2.zip">1.0.2</a>  (2016-02-18)
+* Fix: Ensure that moving an API Method to another resource cleans up the old method.
+
+## <a href="https://s3-eu-west-1.amazonaws.com/apigatewaycloudformation/builds/1.0.1.zip">1.0.1</a> (2016-02-17)
+* Added backoff and retries if failure due to concurrent modifications. <a href="https://github.com/carlnordenfelt/aws-api-gateway-for-cloudformation/pull/5">PR #5</a>
+* Rewrote installation and deploy scripts in nodejs and npm.
+* Removed Dynamo table for tracking resources, now tracked via the PhysicalResourceId. <a href="https://github.com/carlnordenfelt/aws-api-gateway-for-cloudformation/pull/4">PR #4</a>
+* No longer validating parameters on delete. <a href="https://github.com/carlnordenfelt/aws-api-gateway-for-cloudformation/pull/3">PR #3</a>
+* Improved the README
+* Added sample template for testing
+* Installation packages and installation template is hosted on S3.
+
+**Update notes**
+If you are updating from 0.0.1 you have to delete all your APIs and your existing installation of Api Gateway for CloudFormation.
+This update is not backward compatible.
+
+## 0.0.1 (2016-01-04)
+**Note:** This version is no longer available and cannot be installed.
+* Initial release
+
+
 #TODO
 
 * Enable deployment management
-* Change deploy script so that it does not require a local file with reference to the Lambda ARN, thus enabling multi-region setups from one installation.
-* Create stable release packages with release notes etc.
+* Test installation on linux & windows
+* Create packages for installation so repo no longer has to be cloned to install.
+
+#Contribute
+I gladly accepts PRs, issues and comments. Anything that will help improve stability, reduce complexity or add more 
+functionality is appreciated. Please make sure that npm test does not fail before you push your PR. 
+There are strict requirements on es-lint and 100% unit test coverage for builds to succeed before they can be published.
